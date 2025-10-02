@@ -232,28 +232,68 @@
       }
     }
 
-    // RK4 & integration
-    function rk4Step(f,x,y,h){
-      const k1=f(x,y), k2=f(x+h/2,y+(h/2)*k1), k3=f(x+h/2,y+(h/2)*k2), k4=f(x+h,y+h*k3);
-      return y + (h/6)*(k1+2*k2+2*k3+k4);
-    }
-    function integrateBoth(f,x0,y0,xMin,xMax,h){
-      const xs=[x0], ys=[y0];
-      let x=x0, y=y0;
-      for(let i=0;i<20000 && x<xMax-1e-12;i++){
-        const next=Math.min(x+h,xMax), hh=next-x;
-        y=rk4Step(f,x,y,hh); x=next; if(!Number.isFinite(y)) break;
+    // RK4 single step (basic)
+function rk4Step(f, x, y, h){
+  const k1 = f(x, y);
+  const k2 = f(x + h/2, y + (h/2)*k1);
+  const k3 = f(x + h/2, y + (h/2)*k2);
+  const k4 = f(x + h, y + h*k3);
+  return y + (h/6)*(k1 + 2*k2 + 2*k3 + k4);
+}
+
+// Adaptive RK4 integrator (both directions)
+function integrateBoth(f, x0, y0, xMin, xMax, hInit){
+  const tol = 1e-5;       // סף דיוק
+  const hMin = 1e-4;      // צעד מינימלי
+  const hMax = 0.05;      // צעד מקסימלי
+
+  function integrateDir(sign){
+    let x = x0, y = y0, h = hInit;
+    const xs = [x], ys = [y];
+
+    for(let i=0; i<20000; i++){
+      if((sign>0 && x>=xMax) || (sign<0 && x<=xMin)) break;
+      if(!Number.isFinite(y)) break;
+
+      // ודא שלא חורגים מהתחום
+      if(sign>0 && x+h > xMax) h = xMax - x;
+      if(sign<0 && x+h < xMin) h = xMin - x;
+
+      // שלב כפול חצאים: לבדוק שגיאה
+      const yFull = rk4Step(f, x, y, h);
+      const yHalf1 = rk4Step(f, x, y, h/2);
+      const yHalf2 = rk4Step(f, x + h/2, yHalf1, h/2);
+      const err = Math.abs(yHalf2 - yFull);
+
+      if(err < tol || h <= hMin*1.1){
+        // מקבלים את הצעד
+        x += h; y = yHalf2;
         xs.push(x); ys.push(y);
       }
-      const xs2=[], ys2=[]; x=x0; y=y0;
-      for(let i=0;i<20000 && x>xMin+1e-12;i++){
-        const next=Math.max(x-h,xMin), hh=next-x;
-        y=rk4Step(f,x,y,hh); x=next; if(!Number.isFinite(y)) break;
-        xs2.push(x); ys2.push(y);
+
+      // התאמת הצעד
+      if(err > 0){
+        const s = 0.9 * Math.pow(tol/err, 0.25);
+        h = Math.min(hMax, Math.max(hMin, s*h));
+      } else {
+        h = Math.min(hMax, 2*h);
       }
-      xs2.reverse(); ys2.reverse();
-      return {xs:xs2.concat(xs), ys:ys2.concat(ys)};
+
+      h *= sign; // כיוון
     }
+    return {xs, ys};
+  }
+
+  const forward = integrateDir(+1);
+  const backward = integrateDir(-1);
+
+  backward.xs.reverse(); backward.ys.reverse();
+  return {
+    xs: backward.xs.concat(forward.xs),
+    ys: backward.ys.concat(forward.ys)
+  };
+}
+
 
     // find finite start near given (x0,y0)
     function findFiniteStart(x0,y0,f){
