@@ -319,6 +319,7 @@ function integrateBoth(f, x0, y0, xMin, xMax, hInit){
       for(let gx=Math.ceil(xmin); gx<=Math.floor(xmax); gx++){ const px=xToPx(gx); ctx.moveTo(px,0); ctx.lineTo(px,height); }
       for(let gy=-6; gy<=6; gy++){ const py=yToPx(gy); ctx.moveTo(0,py); ctx.lineTo(width,py); }
       ctx.stroke();
+     
       ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--axis').trim()||'#e5e7eb';
       ctx.lineWidth=1.5;
       ctx.beginPath();
