@@ -252,11 +252,12 @@ function integrateBoth(f, x0, y0, xMin, xMax, hInit){
     let x = x0, y = y0, h = hInit;
     const xs = [x], ys = [y];
 
-    for(let i=0; i<20000; i++){
+  //  for(let i=0; i<20000; i++){
+      for(let i=0; i<100000; i++){
       if((sign>0 && x>=xMax) || (sign<0 && x<=xMin)) break;
       if(!Number.isFinite(y)) break;
 
-      // ודא שלא חורגים מהתחום
+      // לודא שלא חורגים מהתחום
       if(sign>0 && x+h > xMax) h = xMax - x;
       if(sign<0 && x+h < xMin) h = xMin - x;
 
